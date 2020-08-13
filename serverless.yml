@@ -1,0 +1,44 @@
+service: cronapp
+
+provider:
+    name: aws
+    stage: production
+    region: ap-southeast-2
+    runtime: provided
+    apiName: ${self:service.name}-${opt:stage, self:provider.stage}
+    endpointType: EDGE
+    memorySize: 256
+    timeout: 30 # Maximum (in seconds) allowed for HTTP APIs
+    versionFunctions: false
+
+plugins:
+    - ./vendor/bref/bref
+
+package:
+    exclude:
+        - 'tests/**'
+
+functions:
+    hello:
+        handler: src/hello.handler.php
+        description: 'Hello World endpoint'
+        timeout: 10 # in seconds
+        layers:
+            - ${bref:layer.php-73}
+        events:
+            - httpApi:
+                method: GET
+                path: /hello
+                cors: true
+    scheduler:
+        handler: src/scheduler.handler.php
+        description: 'Cron scheduler endpoint'
+        layers:
+            - ${bref:layer.php-73}
+        events:
+            - schedule:
+                rate: cron(*/1 * * * ? *)
+                enabled: true
+        # environment:
+        #     DB_HOST: ${ssm:/rds/DB_HOST}
+
